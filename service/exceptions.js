@@ -2,7 +2,8 @@ const appError = (httpStatus, errMessage, next) => {
   const error = new Error(errMessage);
   error.statusCode = httpStatus;
   error.isOperational = true;
-  next(error);
+  return error;
+  // next(error);
 }
 
 // 通常都要寫 catch, 但如果忘記寫，又有錯誤的話，就會跑到下方這個 function，process.on 是 node.js 內建的方法
@@ -50,26 +51,24 @@ const resErrorDev = (err, res) => {
 };
 
 const handleErrorRes = (err, req, res, next) => {
-  // dev
   err.statusCode = err.statusCode || 400;
   if (err instanceof SyntaxError && 'body' in err) {
     err.message = "欄位格式錯誤"
+    err.isOperational = true;
   }
   if (err.name === 'CastError') {
     err.message = "路徑找不到此 ID，請再次確認！"
+    err.isOperational = true;
   }
-  if (process.env.NODE_ENV === 'dev') {
-    return resErrorDev(err, res);
-  }
-
-  // production
   if (err.name === 'ValidationError') {
     err.message = "資料欄位未填寫正確，請重新輸入！"
     err.isOperational = true;
-    err.statusCode = 400
-    return resErrorProd(err, res)
   }
-
+  // dev
+  if (process.env.NODE_ENV === 'dev') {
+    return resErrorDev(err, res);
+  }
+  // production
   resErrorProd(err, res)
 }
 module.exports = {
